@@ -4,6 +4,11 @@ import { Context } from "./context.js";
 import { ToolRegistry } from "./tools.js";
 import { Agent } from "./agent.js";
 import { registerLogger } from "./logger.js";
+import { loadEnvFile } from "./env.js";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+loadEnvFile(join(fileURLToPath(new URL("..", import.meta.url)), ".env"));
 
 const userInput = process.argv[2];
 if (!userInput) {
