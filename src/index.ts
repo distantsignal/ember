@@ -23,6 +23,13 @@ const model = process.env.OPENAI_MODEL || "gpt-3.5-turbo";
 const events = new EventEmitter();
 registerLogger(events, console.log);
 
+let agentFailed = false;
+events.on((event) => {
+  if (event.type === "agent:error") {
+    agentFailed = true;
+  }
+});
+
 const context = new Context(
   "你是一个有用的 AI 助手。你可以使用提供的工具来获取信息，然后基于信息回答问题。"
 );
@@ -53,7 +60,8 @@ tools.register({
 const llm = new LLMClient(apiKey, baseUrl, model);
 const agent = new Agent({ llm, context, tools, events, maxRounds: 15 });
 
-agent.run(userInput).catch((err) => {
-  console.error(err);
-  process.exit(1);
+agent.run(userInput).then(() => {
+  if (agentFailed) {
+    process.exit(1);
+  }
 });
