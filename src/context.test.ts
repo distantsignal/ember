@@ -50,4 +50,17 @@ describe("Context", () => {
     assert.strictEqual(messages[1].role, "assistant");
     assert.strictEqual(messages[1].content, "Final answer");
   });
+
+  it("should trim messages with a sliding window keeping system message", () => {
+    const ctx = new Context("system", 3);
+    ctx.addUserMessage("m1");
+    ctx.addAssistantMessage("m2");
+    ctx.addUserMessage("m3");
+    ctx.addAssistantMessage("m4");
+
+    const messages = ctx.getAll();
+    assert.strictEqual(messages.length, 3);
+    assert.strictEqual(messages[0].role, "system");
+    assert.strictEqual(messages[messages.length - 1].content, "m4");
+  });
 });

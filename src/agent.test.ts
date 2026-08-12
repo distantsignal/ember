@@ -70,6 +70,24 @@ describe("Agent", () => {
     assert.ok(events.includes("agent:done"));
   });
 
+  it("should continue the loop after an empty LLM response", async () => {
+    const mockLLM = createMockLLM([
+      { content: null, toolCalls: undefined },
+      { content: "recovered", toolCalls: undefined },
+    ]);
+
+    const agent = new Agent({
+      llm: mockLLM,
+      context: new Context("You are helpful"),
+      tools: new ToolRegistry(),
+      events: new EventEmitter(),
+      maxRounds: 10,
+    });
+
+    const result = await agent.run("test");
+    assert.strictEqual(result, "recovered");
+  });
+
   it("should stop after max rounds and return partial result", async () => {
     const mockLLM = createMockLLM(
       Array(20).fill({

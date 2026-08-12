@@ -69,15 +69,21 @@ export class Agent {
       }
 
       events.emit({ type: "agent:thought", content: res.content } as AgentEvent);
-      context.addAssistantMessage(res.content ?? "");
+
+      if (!res.content) {
+        // 空响应：视为无效轮次，继续循环（超过 maxRounds 会自动终止）
+        continue;
+      }
+
+      context.addAssistantMessage(res.content);
 
       events.emit({
         type: "agent:done",
-        answer: res.content ?? "",
+        answer: res.content,
         rounds: round,
       } as AgentEvent);
 
-      return res.content ?? "";
+      return res.content;
     }
 
     const error = new Error(`超过最大轮次 (${maxRounds} 轮)`);

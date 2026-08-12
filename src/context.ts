@@ -3,7 +3,7 @@ import type { Message, ToolCall } from "./types.js";
 export class Context {
   private messages: Message[];
 
-  constructor(systemPrompt: string) {
+  constructor(systemPrompt: string, private maxMessages = 30) {
     this.messages = [
       { role: "system", content: systemPrompt },
     ];
@@ -34,6 +34,11 @@ export class Context {
   }
 
   getAll(): Message[] {
-    return [...this.messages];
+    if (this.messages.length <= this.maxMessages) {
+      return [...this.messages];
+    }
+    const system = this.messages[0];
+    const rest = this.messages.slice(this.messages.length - (this.maxMessages - 1));
+    return [system, ...rest];
   }
 }

@@ -67,17 +67,6 @@ export interface ChatCompletionResponse {
   }[];
 }
 
-// ====== Agent 配置 ======
-
-export interface AgentConfig {
-  model: string;
-  baseUrl: string;
-  apiKey: string;
-  maxRounds: number;
-  temperature: number;
-  systemPrompt: string;
-}
-
 // ====== 事件系统 ======
 
 export type AgentEvent =
