@@ -1,4 +1,4 @@
-import { describe, it, mock } from "node:test";
+import { describe, it, mock, afterEach } from "node:test";
 import assert from "node:assert";
 import { EventEmitter } from "./events.js";
 import { LLMClient } from "./llm-client.js";
@@ -9,6 +9,12 @@ import { registerLogger } from "./logger.js";
 import type { ChatCompletionResponse } from "./types.js";
 
 describe("Integration Smoke Test", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
   it("should complete a tool-using workflow end to end", async () => {
     const responses: ChatCompletionResponse[] = [
       {
