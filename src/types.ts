@@ -56,6 +56,9 @@ export interface ChatCompletionRequest {
 
 export interface ChatCompletionResponse {
   id: string;
+  model?: string;
+  object?: string;
+  created?: number;
   choices: {
     index: number;
     message: {
@@ -65,6 +68,16 @@ export interface ChatCompletionResponse {
     };
     finish_reason: "stop" | "tool_calls" | "length";
   }[];
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+}
+
+export interface LLMResponse {
+  content: string | null;
+  toolCalls?: ToolCall[];
 }
 
 // ====== 事件系统 ======
@@ -76,6 +89,9 @@ export type AgentEvent =
   | { type: "agent:act"; tool: { name: string; args: Record<string, unknown> } }
   | { type: "agent:observe"; result: string }
   | { type: "agent:done"; answer: string; rounds: number }
-  | { type: "agent:error"; error: Error; phase: string };
+  | { type: "agent:error"; error: Error; phase: string }
+  | { type: "llm:call"; round?: number; url: string; request: ChatCompletionRequest }
+  | { type: "llm:response"; round?: number; status: number; data: ChatCompletionResponse }
+  | { type: "llm:error"; round?: number; attempt: number; error: Error; httpStatus?: number; responseBody?: string };
 
 export type EventHandler = (event: AgentEvent) => void;

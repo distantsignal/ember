@@ -31,7 +31,7 @@ export class Agent {
 
       let res;
       try {
-        res = await llm.chat(context.getAll(), tools.getToolDefs());
+        res = await llm.chat(context.getAll(), tools.getToolDefs(), { round });
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         events.emit({ type: "agent:error", error, phase: "llm-chat" } as AgentEvent);

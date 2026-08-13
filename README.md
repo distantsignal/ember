@@ -10,13 +10,23 @@
 npm install
 ```
 
-配置环境变量：
+### 配置环境变量
+
+在项目根目录创建 `.env` 文件（CLI 启动时会自动加载，无需手动 export）：
+
+```bash
+OPENAI_API_KEY=sk-xxx
+OPENAI_BASE_URL=https://api.deepseek.com/v1   # 可选，默认 https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o                            # 可选，默认 gpt-3.5-turbo
+```
+
+也支持 shell 环境变量（优先级更高，`.env` 不会覆盖已存在的环境变量）：
 
 ```bash
 export OPENAI_API_KEY=sk-xxx
-export OPENAI_BASE_URL=https://api.deepseek.com/v1   # 可选，默认 https://api.openai.com/v1
-export OPENAI_MODEL=gpt-4o                            # 可选，默认 gpt-3.5-turbo
 ```
+
+`.env` 文件规则（见 `src/env.ts`）：每行一个 `KEY=VALUE`，`#` 开头为注释，值支持单引号/双引号包裹，已存在的环境变量不会被覆盖。`.env` 文件不存在时静默跳过，仅当 `OPENAI_API_KEY` 缺失时 CLI 才会报错退出。
 
 运行：
 
@@ -64,13 +74,39 @@ Agent 每走一步就发布一个事件，logger 监听事件流并输出到终�
 ```
 🚀 agent:start   任务: 今天成都天气怎么样？
 🧠 agent:think   第 1 轮思考...
+📡 llm:call   POST https://api.openai.com/v1/chat/completions (第 1 轮)
+    request: {
+      "model": "gpt-4",
+      "messages": [
+        { "role": "system", "content": "你是一个有用的 AI 助手。" },
+        { "role": "user", "content": "今天成都天气怎么样？" }
+      ],
+      "temperature": 0.7,
+      "tools": [{ "type": "function", "function": { "name": "get_weather", ... } }]
+    }
+📨 llm:response HTTP 200 (第 1 轮) · id: chatcmpl-abc · finish_reason: tool_calls
+    data: {
+      "id": "chatcmpl-abc",
+      "choices": [{ "index": 0, "message": { "role": "assistant", "content": null,
+        "tool_calls": [{ "id": "c1", "type": "function",
+        "function": { "name": "get_weather", "arguments": "{\"city\":\"成都\"}" } }] },
+        "finish_reason": "tool_calls" }],
+      "usage": { "prompt_tokens": 120, "completion_tokens": 15, "total_tokens": 135 }
+    }
 💭 agent:thought 决定调用工具: get_weather
 🔧 agent:act     get_weather({"city":"成都"})
 👁  agent:observe {"city":"成都","temperature":30,"condition":"晴"}
 🧠 agent:think   第 2 轮思考...
+📡 llm:call   POST https://api.openai.com/v1/chat/completions (第 2 轮)
+    request: { "model": "gpt-4", "messages": [ ...system + 前两轮对话... ], "temperature": 0.7, ... }
+📨 llm:response HTTP 200 (第 2 轮) · id: chatcmpl-def · finish_reason: stop
+    data: { "id": "chatcmpl-def", "choices": [{ "message": { "content": "成都今天 30°C，晴天。" }, ... }] }
+💭 agent:thought 成都今天 30°C，晴天。
 ✅ agent:done    成都今天 30°C，晴天。
 📊 总轮次: 2
 ```
+
+`llm:call` / `llm:response` / `llm:error` 三个事件由 **LLMClient 在 HTTP 层发出**，携带**真实接口出入参**：`llm:call` 打印完整请求体（model、messages、temperature、tools），`llm:response` 打印原始响应 JSON（id、choices、finish_reason、usage），每次重试失败还会发 `llm:error` 带上 HTTP 状态码与响应体——订阅事件流即可拿到原始数据，logger 只是把它缩进渲染出来。
 
 Agent 只负责发布事件，不关心事件如何被消费——日志、记录、UI 展示都解耦在外部。
 

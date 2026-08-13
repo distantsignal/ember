@@ -12,6 +12,32 @@ export function registerLogger(ee: EventEmitter, write: (line: string) => void):
         write(`🧠 agent:think   第 ${event.round} 轮思考...`);
         break;
 
+      case "llm:call": {
+        const roundText = event.round ? ` (第 ${event.round} 轮)` : "";
+        write(`📡 llm:call   POST ${event.url}${roundText}`);
+        write(`    request: ${JSON.stringify(event.request, null, 2)}`);
+        break;
+      }
+
+      case "llm:response": {
+        const roundText = event.round ? ` (第 ${event.round} 轮)` : "";
+        const id = event.data.id ? ` · id: ${event.data.id}` : "";
+        const finish = event.data.choices[0]?.finish_reason ? ` · finish_reason: ${event.data.choices[0].finish_reason}` : "";
+        write(`📨 llm:response HTTP ${event.status}${roundText}${id}${finish}`);
+        write(`    data: ${JSON.stringify(event.data, null, 2)}`);
+        break;
+      }
+
+      case "llm:error": {
+        const roundText = event.round ? ` (第 ${event.round} 轮)` : "";
+        const status = event.httpStatus !== undefined ? ` · HTTP ${event.httpStatus}` : "";
+        write(`⚠️  llm:error  尝试 #${event.attempt}${status}${roundText} · ${event.error.message}`);
+        if (event.responseBody) {
+          write(`    responseBody: ${event.responseBody}`);
+        }
+        break;
+      }
+
       case "agent:thought":
         if (event.toolCalls && event.toolCalls.length > 0) {
           const names = event.toolCalls.map((tc) => tc.function.name).join(", ");

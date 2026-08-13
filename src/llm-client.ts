@@ -1,8 +1,13 @@
-import type { Message, ToolCall, ChatCompletionRequest, ChatCompletionResponse, JSONSchemaType } from "./types.js";
+import type { Message, ToolCall, ChatCompletionRequest, ChatCompletionResponse, JSONSchemaType, LLMResponse, AgentEvent } from "./types.js";
 
-export interface LLMResponse {
-  content: string | null;
-  toolCalls?: ToolCall[];
+export type { LLMResponse } from "./types.js";
+
+export interface LLMEventSink {
+  emit(event: AgentEvent): void;
+}
+
+export interface LLMChatTag {
+  round?: number;
 }
 
 export class LLMClient {
@@ -11,11 +16,13 @@ export class LLMClient {
     private baseUrl: string,
     private model: string,
     private maxRetries = 2,
+    private events?: LLMEventSink,
   ) {}
 
   async chat(
     messages: Message[],
     tools: { type: "function"; function: { name: string; description: string; parameters: JSONSchemaType } }[],
+    tag?: LLMChatTag,
   ): Promise<LLMResponse> {
     const url = `${this.baseUrl}/chat/completions`;
 
@@ -28,6 +35,8 @@ export class LLMClient {
     if (tools.length > 0) {
       body.tools = tools;
     }
+
+    this.events?.emit({ type: "llm:call", round: tag?.round, url, request: body } as AgentEvent);
 
     let lastError: Error | null = null;
 
@@ -44,6 +53,7 @@ export class LLMClient {
 
         if (res.ok) {
           const data = (await res.json()) as ChatCompletionResponse;
+          this.events?.emit({ type: "llm:response", round: tag?.round, status: res.status, data } as AgentEvent);
           const choice = data.choices[0];
           return {
             content: choice.message.content,
@@ -53,8 +63,17 @@ export class LLMClient {
 
         const errorText = await res.text().catch(() => "unknown error");
         lastError = new Error(`HTTP ${res.status}: ${errorText}`);
+        this.events?.emit({
+          type: "llm:error",
+          round: tag?.round,
+          attempt,
+          error: lastError,
+          httpStatus: res.status,
+          responseBody: errorText,
+        } as AgentEvent);
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
+        this.events?.emit({ type: "llm:error", round: tag?.round, attempt, error: lastError } as AgentEvent);
       }
 
       if (attempt < this.maxRetries) {

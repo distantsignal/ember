@@ -60,12 +60,15 @@ while (未超过最大轮次):
 
 ## 4. 事件系统设计
 
-7 种事件覆盖 agent 的完整生命周期：
+10 种事件覆盖 agent 的完整生命周期。其中 `llm:*` 三个事件由 **LLMClient 在 HTTP 层发出**（构造时注入事件发射器），其余由 Agent 发出：
 
 | 事件 | 触发时机 | 携带数据 |
 |------|----------|----------|
 | `agent:start` | Agent 启动 | 用户输入、轮次上限 |
 | `agent:think` | 即将调用 LLM | 当前轮次序号 |
+| `llm:call` | 发出 HTTP 请求前 | 完整请求体（model、messages、temperature、tools）、URL |
+| `llm:response` | HTTP 响应成功 | HTTP 状态码、原始响应 JSON（id、choices、finish_reason、usage） |
+| `llm:error` | 单次请求失败 | 尝试序号、HTTP 状态码、响应体、错误对象（每次重试都发） |
 | `agent:thought` | LLM 响应返回 | 思考内容、tool_calls 列表 |
 | `agent:act` | 即将执行工具 | 工具名称、调用参数 |
 | `agent:observe` | 工具执行完成 | 工具返回结果 |
@@ -74,7 +77,7 @@ while (未超过最大轮次):
 
 **实现**：手写一个不到 30 行的 EventEmitter，`on(event, cb)` 和 `emit(event, data)` 两个方法。
 
-**解耦**：Agent 只负责 emit，不关心事件如何被消费。默认注册一个 logger 监听器，将事件流转为彩色终端输出。
+**解耦**：Agent 与 LLMClient 都只负责 emit，不关心事件如何被消费。默认注册一个 logger 监听器，将事件流转为彩色终端输出。
 
 ---
 

@@ -62,7 +62,7 @@ tools.register({
   },
 });
 
-const llm = new LLMClient(apiKey, baseUrl, model);
+const llm = new LLMClient(apiKey, baseUrl, model, 2, events);
 const agent = new Agent({ llm, context, tools, events, maxRounds: 15 });
 
 agent.run(userInput).then(() => {

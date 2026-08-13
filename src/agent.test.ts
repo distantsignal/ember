@@ -31,8 +31,34 @@ describe("Agent", () => {
       maxRounds: 10,
     });
 
+    const events: string[] = [];
+    agent.events.on((e) => events.push(e.type));
+
     const result = await agent.run("Say hello");
     assert.strictEqual(result, "Hello, I am an assistant.");
+    assert.ok(events.includes("agent:think"));
+    assert.ok(events.includes("agent:done"));
+  });
+
+  it("should pass the current round to llm.chat", async () => {
+    let lastTag: { round: number } | undefined;
+    const mockLLM = {
+      chat: async (_messages: unknown, _tools: unknown, tag: { round: number }) => {
+        lastTag = tag;
+        return { content: "ok", toolCalls: undefined } as LLMResponse;
+      },
+    } as unknown as LLMClient;
+
+    const agent = new Agent({
+      llm: mockLLM,
+      context: new Context("You are helpful"),
+      tools: new ToolRegistry(),
+      events: new EventEmitter(),
+      maxRounds: 10,
+    });
+
+    await agent.run("hello");
+    assert.deepStrictEqual(lastTag, { round: 1 });
   });
 
   it("should loop through tool calls and return final answer", async () => {
